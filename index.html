@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+		<title>reveal.js</title>
+
+		<link rel="stylesheet" href="dist/reset.css">
+		<link rel="stylesheet" href="dist/reveal.css">
+		<link rel="stylesheet" href="dist/theme/dracula.css">
+
+		<!-- Theme used for syntax highlighted code -->
+		<link rel="stylesheet" href="plugin/highlight/tokyo-night-dark.css">
+	</head>
+	<body>
+		<div class="reveal">
+			<div class="slides">
+                <section data-markdown>
+                    <textarea data-template>
+                        # `rules_ll`
+
+                        ## A toolchain around upstream LLVM
+
+                        <https://github.com/eomii/rules_ll>
+
+                        Aaron Siddhartha Mondal
+
+                        Trace Machina
+
+                        ---
+
+                        #### What is `rules_ll`?
+
+                        - Reproducible toolchain around `utils/bazel`
+                        - Supports C, C++, CUDA, HIP and OpenMP
+                        - Includes tooling (`clang-tidy`, coverage, sanitizers)
+
+                        ---
+
+                        #### Workflow
+
+                        ![workflow](dist/ci.png "workflow")
+
+                        ---
+
+                        #### Hello, world!
+
+                        ```cpp
+                        // hello.cpp
+                        import std;
+
+                        auto main() -> int {
+                            std::cout << "Hello, world!"
+                                      << '\n';
+                            return 0;
+                        }
+                        ```
+                        ```python
+                        # BUILD.bazel
+                        ll_binary(
+                            name = "hello",
+                            srcs = ["hello.cpp"],
+                            compile_flags = ["-std=c++2b"],
+                        )
+                        ```
+                        ```bash
+                        #!/bin/sh
+                        bazel run hello
+
+                        # ... wait for LLVM to compile ...
+
+                        Hello, world!
+                        ```
+
+                        ---
+
+                        #### HIP
+
+                        ```
+                        // hello_hip.cpp
+                        #include "hip/hip_runtime.h"
+                        ```
+
+                        ```python [4-5]
+                        ll_binary(
+                            name = "hello_hip",
+                            srcs = ["hello_hip.cpp"],
+                            compilation_mode = "hip_amdgpu",       # "hip_nvptx"
+                            compile_flags = OFFLOAD_ALL_AMDGPU + [ # ..._NVPTX
+                                "--std=c++20",
+                            ],
+                        )
+                        ```
+
+                        HIP/ROCm is built from source.
+
+                        ---
+
+                        #### Depending on LLVM
+
+                        ```cpp
+                        // frontend_action.cpp
+                        #include "clang/AST/ASTConsumer.h"
+                        ```
+
+                        ```python [5]
+                        ll_library(
+                            name = "frontend_action_example",
+                            srcs = ["frontend_action.cpp"],
+                            compile_flags = ["-std=c++20"],
+                            depends_on_llvm = 1,
+                        )
+                        ```
+
+                        ---
+
+                        #### OpenMP
+
+                        ```cpp
+                        // main.cpp
+                        #include <omp.h>
+                        ```
+
+                        ```python [4]
+                        ll_binary(
+                            name = "openmp_example",
+                            srcs = ["main.cpp"],
+                            compilation_mode = "omp_cpu",
+                            compile_flags = ["-std=c++20"],
+                        )
+                        ```
+
+                        ---
+
+                        #### Clang-Tidy
+
+                        ```yaml
+                        # .clang-tidy
+                        Checks: *
+                        ```
+
+                        ```python
+                        ll_compilation_database(
+                            name = "compile_commands",
+                            config = ".clang-tidy",
+                            targets = [":sometarget"],
+                        )
+                        ```
+
+                        ```sh
+                        #!/bin/sh
+                        bazel run compile_commands
+                        ```
+
+                        ---
+
+                        #### Future development
+
+                        - <https://github.com/TraceMachina/native-link>
+                        - Musl and/or LLVM libc support
+                        - WebAssembly targets
+                        - `"omp_nvptx"`/`"omp_amdgpu"`?
+
+                        ---
+
+                        #### Contact
+
+                        Aaron Siddhartha Mondal
+
+                        `aaron@tracemachina.com`
+
+                        GitHub `@aaronmondal`
+
+                    </textarea>
+                </section>
+			</div>
+		</div>
+
+		<script src="dist/reveal.js"></script>
+		<script src="plugin/notes/notes.js"></script>
+		<script src="plugin/markdown/markdown.js"></script>
+		<script src="plugin/highlight/highlight.js"></script>
+		<script>
+			// More info about initialization & config:
+			// - https://revealjs.com/initialization/
+			// - https://revealjs.com/config/
+			Reveal.initialize({
+				hash: true,
+
+				// Learn about plugins: https://revealjs.com/plugins/
+				plugins: [ RevealMarkdown, RevealHighlight, RevealNotes ]
+			});
+		</script>
+	</body>
+</html>
